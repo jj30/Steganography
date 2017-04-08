@@ -16,14 +16,18 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static int RESULT_LOAD_IMAGE = 1;
+    private static int RESULT_SHOW_MESSAGE = 1;
+    private static int RESULT_HIDE_MESSAGE = 2;
     private String strPicturePath;
 
     // Used to load the 'native-lib' library on application startup.
@@ -44,16 +48,37 @@ public class MainActivity extends AppCompatActivity {
         // TextView tv = (TextView) findViewById(R.id.sample_text);
         // tv.setText(stringFromJNI());
 
+        final EditText editText = (EditText) findViewById(R.id.editHideMessage);
+        final TextView textView = (TextView) findViewById(R.id.txtShowMessage);
+
         // http://stackoverflow.com/questions/21072034/image-browse-button-in-android-activity
-        Button buttonLoadImage = (Button) findViewById(R.id.buttonLoadPicture);
-        buttonLoadImage.setOnClickListener(new View.OnClickListener() {
+        Button buttonShowMessage = (Button) findViewById(R.id.buttonShowMessage);
+        buttonShowMessage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
                 Intent i = new Intent(
                         Intent.ACTION_PICK,
                         android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
 
-                startActivityForResult(i, RESULT_LOAD_IMAGE);
+                startActivityForResult(i, RESULT_SHOW_MESSAGE);
+            }
+        });
+
+        Button buttonHideMessage = (Button) findViewById(R.id.buttonHideMessage);
+        buttonHideMessage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View arg0) {
+                // if the edit text isn't showing, show it
+                if (editText.getVisibility() == View.GONE) {
+                    editText.setVisibility(View.VISIBLE);
+                    textView.setVisibility(View.GONE);
+                } else {
+                    Intent i = new Intent(
+                            Intent.ACTION_PICK,
+                            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+
+                    startActivityForResult(i, RESULT_HIDE_MESSAGE);
+                }
             }
         });
 
@@ -63,8 +88,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
+        TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
+        EditText editText = (EditText) findViewById(R.id.editHideMessage);
+
+        // first run, there's no decoded message yet.
+        // view text invisible
+        // edit text visible
+        txtView.setVisibility(View.GONE);
+        editText.setVisibility(View.VISIBLE);
+
+        String strMessage = editText.getText().toString();
+
         // this code decodes
-        /* if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
+        if (requestCode == RESULT_SHOW_MESSAGE && resultCode == RESULT_OK && null != data) {
             Uri selectedImage = data.getData();
             String[] filePathColumn = { MediaStore.Images.Media.DATA };
 
@@ -79,12 +115,17 @@ public class MainActivity extends AppCompatActivity {
             Bitmap bitmap = BitmapFactory.decodeFile(picturePath);
             imageView.setImageBitmap(bitmap);
 
-            String strMessage = (new Decode()).d(bitmap);
-            Log.i("Steg", strMessage);
-        }*/
+            // show decided message
+            strMessage = (new Decode()).d(bitmap);
 
-        // this code encodes "Top secret message: DOH"
-        if (requestCode == RESULT_LOAD_IMAGE && resultCode == RESULT_OK && null != data) {
+            // make the edit text invisible; the view text visible
+            editText.setVisibility(View.GONE);
+            txtView.setVisibility(View.VISIBLE);
+            txtView.setText(strMessage);
+        }
+
+        // this code encodes the message in editText
+        if (requestCode == RESULT_HIDE_MESSAGE && resultCode == RESULT_OK && null != data) {
             Uri selectedImage = data.getData();
             String[] filePathColumn = { MediaStore.Images.Media.DATA };
 
@@ -96,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
             cursor.close();
 
             ImageView imageView = (ImageView) findViewById(R.id.imgView);
-            Bitmap bitmapOutput = new Encode().encoded(BitmapFactory.decodeFile(strPicturePath), "This pretty chess player is Maria Hernandez, she's Argentine.");
+            Bitmap bitmapOutput = new Encode().encoded(BitmapFactory.decodeFile(strPicturePath), strMessage);
             SaveToDisk(bitmapOutput);
             imageView.setImageBitmap(bitmapOutput);
         }
@@ -124,12 +165,14 @@ public class MainActivity extends AppCompatActivity {
             // String path = Environment.getExternalStorageDirectory().toString();
             String path = absPath(strPicturePath);
             String originalName = strPicturePath.replace(path, "").replace("/", "");
+            String[] aryNameAndExt = originalName.split("\\.");
+            String originalExt = aryNameAndExt[aryNameAndExt.length - 1];
             OutputStream fOut = null;
 
-            File file = new File(path, "withMessage.png"); // the File to save , append increasing numeric counter to prevent files from getting overwritten.
+            File file = new File(path, originalName + ".msg." + originalExt);
             fOut = new FileOutputStream(file);
 
-            toDisk.compress(Bitmap.CompressFormat.PNG, 0, fOut); // saving the Bitmap to a file compressed as a JPEG with 85% compression rate
+            toDisk.compress(Bitmap.CompressFormat.PNG, 0, fOut);
             fOut.flush(); // Not really required
             fOut.close(); // do not forget to close the stream
 
