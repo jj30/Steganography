@@ -12,8 +12,10 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.*;
 
 public class Decode {
+    public String strMessage;
+
     // https://github.com/subc/steganography/blob/master/steganography/steganography.py
-    public String d(Bitmap b) {
+    public Decode(Bitmap b) {
         int x = b.getWidth();
         int y = b.getHeight();
         int counter = 0;
@@ -49,23 +51,10 @@ public class Decode {
 
         try {
             bytes = Hex.decodeHex(hexAll.toCharArray());
-            return new String(bytes, "UTF-8");
+            strMessage = new String(bytes, "UTF-8");
         } catch (UnsupportedEncodingException | DecoderException e) {
             e.printStackTrace();
-            return "Exception!";
+            strMessage = "There was an exception: " + e.getMessage();
         }
-    }
-
-    // http://stackoverflow.com/questions/12039341/hex-to-string-in-java-performance-is-too-slow
-    public static String hexToString(String hex) {
-        StringBuilder sb = new StringBuilder();
-        char[] hexData = hex.toCharArray();
-        for (int count = 0; count < hexData.length - 1; count += 2) {
-            int firstDigit = Character.digit(hexData[count], 16);
-            int lastDigit = Character.digit(hexData[count + 1], 16);
-            int decimal = firstDigit * 16 + lastDigit;
-            sb.append((char)decimal);
-        }
-        return sb.toString();
     }
 }

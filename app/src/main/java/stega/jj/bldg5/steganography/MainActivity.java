@@ -19,6 +19,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -81,12 +85,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
 
+
+    @Override
+    public void startActivityForResult(Intent intent, int requestCode) {
+        super.startActivityForResult(intent, requestCode);
+        EventBus.getDefault().register(this);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
 
         TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
         EditText editText = (EditText) findViewById(R.id.editHideMessage);
@@ -116,12 +127,13 @@ public class MainActivity extends AppCompatActivity {
             imageView.setImageBitmap(bitmap);
 
             // show decided message
-            strMessage = (new Decode()).d(bitmap);
+            // strMessage = (new Decode()).d(bitmap);
+            EventBus.getDefault().post(new Decode(bitmap));
 
-            // make the edit text invisible; the view text visible
-            editText.setVisibility(View.GONE);
-            txtView.setVisibility(View.VISIBLE);
-            txtView.setText(strMessage);
+
+
+
+
         }
 
         // this code encodes the message in editText
@@ -141,6 +153,22 @@ public class MainActivity extends AppCompatActivity {
             SaveToDisk(bitmapOutput);
             imageView.setImageBitmap(bitmapOutput);
         }
+    }
+
+    @Subscribe
+    public void onEvent(Decode event){
+        TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
+        EditText editText = (EditText) findViewById(R.id.editHideMessage);
+        String strMessage = event.strMessage;
+
+        // make the edit text invisible; the view text visible
+        editText.setVisibility(View.GONE);
+        txtView.setVisibility(View.VISIBLE);
+        txtView.setText(strMessage);
+
+
+        // your implementation
+        Toast.makeText(this, strMessage, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -212,4 +240,10 @@ public class MainActivity extends AppCompatActivity {
         return TextUtils.join("/", outputPath);
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        EventBus.getDefault().unregister(this);
+    }
 }
