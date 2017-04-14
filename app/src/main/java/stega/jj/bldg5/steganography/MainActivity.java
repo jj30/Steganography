@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
@@ -32,13 +33,13 @@ public class MainActivity extends AppCompatActivity {
     private String strPicturePath;
     private TextView textView;
     private ImageView imageView;
-
+    private ProgressBar progressBar;
 
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
     }
-    
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
         final TextView textView = (TextView) findViewById(R.id.txtShowMessage);
         // http://stackoverflow.com/questions/21072034/image-browse-button-in-android-activity
         Button buttonShowMessage = (Button) findViewById(R.id.buttonShowMessage);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         buttonShowMessage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -97,6 +99,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String result) {
             textView.setText(result);
+            progressBar.setVisibility(View.GONE);
+
         }
     }
 
@@ -111,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Bitmap bmp) {
             SaveToDisk(bmp);
             imageView.setImageBitmap(bmp);
+            progressBar.setVisibility(View.GONE);
         }
     }
 
@@ -123,12 +128,14 @@ public class MainActivity extends AppCompatActivity {
         // non final copy for the asynch postExecute to write to.
         textView = (TextView) findViewById(R.id.txtShowMessage);
         imageView = (ImageView) findViewById(R.id.imgView);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
         // first run, there's no decoded message yet.
         // view text invisible
         // edit text visible
         txtView.setVisibility(View.GONE);
         editText.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.VISIBLE);
 
         String strMessage = editText.getText().toString();
 
