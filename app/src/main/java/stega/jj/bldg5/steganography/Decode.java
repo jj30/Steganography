@@ -12,7 +12,11 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.*;
 
 public class Decode {
-    public String strMessage;
+    private String strMessage;
+
+    public String getString() {
+        return strMessage;
+    }
 
     // https://github.com/subc/steganography/blob/master/steganography/steganography.py
     public Decode(Bitmap b) {

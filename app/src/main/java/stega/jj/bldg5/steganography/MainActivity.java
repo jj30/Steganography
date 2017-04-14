@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v4.text.TextUtilsCompat;
@@ -20,10 +21,6 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -33,12 +30,15 @@ public class MainActivity extends AppCompatActivity {
     private static int RESULT_SHOW_MESSAGE = 1;
     private static int RESULT_HIDE_MESSAGE = 2;
     private String strPicturePath;
+    private TextView textView;
+    private ImageView imageView;
+
 
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
     }
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText editText = (EditText) findViewById(R.id.editHideMessage);
         final TextView textView = (TextView) findViewById(R.id.txtShowMessage);
-
         // http://stackoverflow.com/questions/21072034/image-browse-button-in-android-activity
         Button buttonShowMessage = (Button) findViewById(R.id.buttonShowMessage);
+
         buttonShowMessage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
@@ -87,20 +87,42 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private class DecodeAsyncWrapper extends AsyncTask<String, Void, String> {
+        @Override
+        protected String doInBackground(String... strBitmapLocation) {
+            Bitmap bitmap = BitmapFactory.decodeFile(strBitmapLocation[0]);
+            return (new Decode(bitmap).getString());
+        };
 
-    @Override
-    public void startActivityForResult(Intent intent, int requestCode) {
-        super.startActivityForResult(intent, requestCode);
-        EventBus.getDefault().register(this);
+        @Override
+        protected void onPostExecute(String result) {
+            textView.setText(result);
+        }
+    }
+
+    private class EncodeAsyncWrapper extends AsyncTask<String, Void, Bitmap> {
+        @Override
+        protected Bitmap doInBackground(String... strs) {
+            Bitmap bitmap = BitmapFactory.decodeFile(strs[0]);
+            return (new Encode()).encoded(bitmap, strs[1]);
+        };
+
+        @Override
+        protected void onPostExecute(Bitmap bmp) {
+            SaveToDisk(bmp);
+            imageView.setImageBitmap(bmp);
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-
-        TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
-        EditText editText = (EditText) findViewById(R.id.editHideMessage);
+        final TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
+        final EditText editText = (EditText) findViewById(R.id.editHideMessage);
+        // non final copy for the asynch postExecute to write to.
+        textView = (TextView) findViewById(R.id.txtShowMessage);
+        imageView = (ImageView) findViewById(R.id.imgView);
 
         // first run, there's no decoded message yet.
         // view text invisible
@@ -123,17 +145,15 @@ public class MainActivity extends AppCompatActivity {
             cursor.close();
 
             ImageView imageView = (ImageView) findViewById(R.id.imgView);
-            Bitmap bitmap = BitmapFactory.decodeFile(picturePath);
+            final Bitmap bitmap = BitmapFactory.decodeFile(picturePath);
             imageView.setImageBitmap(bitmap);
 
-            // show decided message
-            // strMessage = (new Decode()).d(bitmap);
-            EventBus.getDefault().post(new Decode(bitmap));
+            // get ready to show the hidden message
+            textView.setVisibility(View.VISIBLE);
+            editText.setVisibility(View.GONE);
 
-
-
-
-
+            DecodeAsyncWrapper task = new DecodeAsyncWrapper();
+            task.execute(new String[] { picturePath });
         }
 
         // this code encodes the message in editText
@@ -148,27 +168,11 @@ public class MainActivity extends AppCompatActivity {
             strPicturePath = cursor.getString(columnIndex);
             cursor.close();
 
-            ImageView imageView = (ImageView) findViewById(R.id.imgView);
-            Bitmap bitmapOutput = new Encode().encoded(BitmapFactory.decodeFile(strPicturePath), strMessage);
-            SaveToDisk(bitmapOutput);
-            imageView.setImageBitmap(bitmapOutput);
+            // Bitmap bitmapOutput = new Encode().encoded(BitmapFactory.decodeFile(strPicturePath), strMessage);
+
+            EncodeAsyncWrapper task = new EncodeAsyncWrapper();
+            task.execute(new String[] { strPicturePath, strMessage });
         }
-    }
-
-    @Subscribe
-    public void onEvent(Decode event){
-        TextView txtView = (TextView) findViewById(R.id.txtShowMessage);
-        EditText editText = (EditText) findViewById(R.id.editHideMessage);
-        String strMessage = event.strMessage;
-
-        // make the edit text invisible; the view text visible
-        editText.setVisibility(View.GONE);
-        txtView.setVisibility(View.VISIBLE);
-        txtView.setText(strMessage);
-
-
-        // your implementation
-        Toast.makeText(this, strMessage, Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -185,8 +189,6 @@ public class MainActivity extends AppCompatActivity {
      * which is packaged with this application.
      */
     public native String stringFromJNI();
-
-
 
     private void SaveToDisk(Bitmap toDisk) {
         try {
@@ -239,11 +241,6 @@ public class MainActivity extends AppCompatActivity {
 
         return TextUtils.join("/", outputPath);
     }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-
-        EventBus.getDefault().unregister(this);
-    }
 }
+
+

@@ -61,7 +61,7 @@ public class Encode {
             Log.i("Steg", ex.getMessage());
         }
 
-        return bitmapOutput;
+           return bitmapOutput;
     }
 
     private int modify(int rgb) {
