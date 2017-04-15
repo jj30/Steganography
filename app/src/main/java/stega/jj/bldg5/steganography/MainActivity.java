@@ -98,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String result) {
+            imageView.setVisibility(View.VISIBLE);
             textView.setText(result);
             progressBar.setVisibility(View.GONE);
 
@@ -114,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Bitmap bmp) {
             SaveToDisk(bmp);
+            imageView.setVisibility(View.VISIBLE);
             imageView.setImageBitmap(bmp);
             progressBar.setVisibility(View.GONE);
         }
@@ -136,6 +138,7 @@ public class MainActivity extends AppCompatActivity {
         txtView.setVisibility(View.GONE);
         editText.setVisibility(View.VISIBLE);
         progressBar.setVisibility(View.VISIBLE);
+        imageView.setVisibility(View.GONE);
 
         String strMessage = editText.getText().toString();
 
